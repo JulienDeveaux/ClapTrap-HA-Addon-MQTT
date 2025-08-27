@@ -17,52 +17,50 @@ options:
     delay: 1.0
     chunk_duration: 0.5
     buffer_duration: 1.0
-  mqtt:
-    client_id: "claptrap_mqtt_client"
-    host: ""
-    username: ""
-    password: ""
-    port: 1883
-    topic: "claptrap"
+  mqtt_client_id: claptrap_mqtt_client
+  mqtt_host: 192.168.1.x
+  mqtt_username: user
+  mqtt_password: xxxx
+  mqtt_port: 1883
+  mqtt_topic: claptrap
   microphone:
-      device_index: 0
-      audio_source: "default"
-      enabled: "False"
+    device_index: 0
+    audio_source: default
+    enabled: False
   rtsp:
     - id: 1
-      url: "rtsp://username:password@ip_address:port/stream"
-      name: "Camera 1"
-      enabled: "False"
+      url: rtsp://username:password@ip_address:port/stream
+      name: Camera 1
+      enabled: False
   vban:
-    - ip: "0.0.0.0"
-      steam_name: "vban_stream"
+    - ip: 0.0.0.0
+      steam_name: vban_stream
       port: 6980
-      enabled: "False"
+      enabled: False
 
 schema:
   global:
-    threshold: str
-    delay: str
-    chunk_duration: str
-    buffer_duration: str
-  mqtt:
-    client_id: str
-    host: str
-    username: str
-    password: str
-    port: str
-    topic: str
+    threshold: str?
+    delay: str?
+    chunk_duration: str?
+    buffer_duration: str?
+  mqtt_client_id: str?
+  mqtt_host: str?
+  mqtt_username: str?
+  mqtt_password: password?
+  mqtt_port: str?
+  mqtt_topic: str?
   microphone:
-      device_index: int
-      audio_source: str
-      enabled: str
+    device_index: int?
+    audio_source: str?
+    enabled: str?
   rtsp:
-    - id: int
-      url: str
-      name: str
-      enabled: str
+    - id: int?
+      url: str?
+      name: str?
+      enabled: str?
   vban:
-    - ip: str
-      steam_name: str
-      port: int
-      enabled: str
+    - ip: str?
+      steam_name: str?
+      port: int?
+      enabled: str?

@@ -32,14 +32,13 @@ class MQTTClient:
         if not hasattr(self, 'initialized'):
             self.initialized = True
             settings = load_settings()
-            mqtt_settings = settings.get('mqtt', {})
 
-            self.broker_url = mqtt_settings.get('host', 'localhost')
-            self.broker_port = mqtt_settings.get('port', 1883)
-            self.username = mqtt_settings.get('username', None)
-            self.password = mqtt_settings.get('password', None)
-            self.client_id = mqtt_settings.get('client_id', None)
-            self.topic = mqtt_settings.get('topic', None)
+            self.broker_url = mqtt_settings.get('mqtt_host', 'localhost')
+            self.broker_port = mqtt_settings.get('mqtt_port', 1883)
+            self.username = mqtt_settings.get('mqtt_username', None)
+            self.password = mqtt_settings.get('mqtt_password', None)
+            self.client_id = mqtt_settings.get('mqtt_client_id', None)
+            self.topic = mqtt_settings.get('mqtt_topic', None)
             self.connection = None
 
     def connect(self):
