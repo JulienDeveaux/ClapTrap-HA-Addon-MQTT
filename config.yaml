@@ -40,27 +40,27 @@ options:
 
 schema:
   global:
-    threshold: str?
-    delay: str?
-    chunk_duration: str?
-    buffer_duration: str?
+    threshold: float?
+    delay: float?
+    chunk_duration: float?
+    buffer_duration: float?
   mqtt_client_id: str?
   mqtt_host: str?
   mqtt_username: str?
   mqtt_password: password?
-  mqtt_port: str?
+  mqtt_port: int?
   mqtt_topic: str?
   microphone:
     device_index: int?
     audio_source: str?
-    enabled: str?
+    enabled: bool?
   rtsp:
     - id: int?
       url: str?
       name: str?
-      enabled: str?
+      enabled: bool?
   vban:
     - ip: str?
       steam_name: str?
       port: int?
-      enabled: str?
+      enabled: bool?
