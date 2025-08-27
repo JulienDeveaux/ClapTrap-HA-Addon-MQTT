@@ -1,3 +1,5 @@
+import logging
+
 from vban_detector_new import VBANDetector
 import time
 
@@ -21,7 +23,7 @@ def init_vban_detector():
             return False
         return True
     except Exception as e:
-        print(f"Error initializing VBANDetector: {e}")
+        logging.error(f"Error initializing VBANDetector: {e}")
         return False
 
 def get_vban_detector():
@@ -40,5 +42,5 @@ def cleanup_vban_detector():
             vban_detector.stop_listening()
             print("Stopping VBAN detector...")
         except Exception as e:
-            print(f"Error stopping VBAN detector: {e}")
+            logging.error(f"Error stopping VBAN detector: {e}")
         vban_detector = None

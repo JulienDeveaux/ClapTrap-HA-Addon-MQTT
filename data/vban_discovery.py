@@ -127,7 +127,7 @@ class VBANDiscovery:
                 # Timeout normal, continuer la boucle
                 continue
             except Exception as e:
-                print(f"Erreur dans la boucle de découverte VBAN: {e}")
+                logging.error(f"Erreur dans la boucle de découverte VBAN: {e}")
                 break
         
         print("Arrêt de la boucle de découverte VBAN")

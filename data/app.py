@@ -23,10 +23,8 @@ def load_settings():
     if os.path.exists(SETTINGS_FILE):
         with open(SETTINGS_FILE, 'r') as f:
             settings = json.load(f)
-            print("test_app")
-            print(settings)
+        logging.basicConfig(level=settings.get('log_level', 'info'))
         return settings
-    print(f"Settings file {SETTINGS_FILE} not found.")
     return None
 
 SETTINGS = load_settings()

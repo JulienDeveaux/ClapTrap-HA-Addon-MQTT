@@ -11,6 +11,8 @@ arch:
   - armhf
   - armv7
   - i386
+map:
+  - addon_configs:rw
 options:
   global:
     threshold: 0.5
@@ -39,6 +41,7 @@ options:
       enabled: False
 
 schema:
+  log_level: list(debug|info|warning|error)?
   global:
     threshold: float?
     delay: float?

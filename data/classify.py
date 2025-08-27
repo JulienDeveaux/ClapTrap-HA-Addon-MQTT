@@ -40,10 +40,8 @@ def load_settings():
     if os.path.exists(SETTINGS_FILE):
         with open(SETTINGS_FILE, 'r') as f:
             settings = json.load(f)
-            print("test")
-            print(settings)
+        logging.basicConfig(level=settings.get('log_level', 'info'))
         return settings
-    print(f"Settings file {SETTINGS_FILE} not found.")
     return None
 
 SETTINGS = load_settings()
@@ -99,20 +97,6 @@ except json.JSONDecodeError:
 except Exception as e:
     logging.error(f"Erreur lors du chargement des flux RTSP: {str(e)}")
     fluxes = {}
-
-def save_audio_to_wav(audio_data, sample_rate, filename):
-    if not audio_data.size:
-        logging.warning("No audio data to save.")
-        return
-    try:
-        with wave.open(filename, 'wb') as wf:
-            wf.setnchannels(1)  # Mono
-            wf.setsampwidth(2)  # 2 bytes per sample
-            wf.setframerate(sample_rate)
-            wf.writeframes(audio_data.tobytes())
-        logging.info(f"Audio saved to {filename}")
-    except Exception as e:
-        logging.error(f"Failed to save audio to {filename}: {e}")
 
 def read_audio_from_rtsp(rtsp_url, buffer_size):
     """Lit un flux RTSP audio en continu sans buffer fichier"""
@@ -347,20 +331,3 @@ def stop_detection():
     except Exception as e:
         logging.error(f"Erreur lors de l'arrêt de la détection: {e}")
         return False  # Retourner False en cas d'erreur
-
-def is_running():
-    return detection_running
-
-# Ajout d'une commande simple pour démarrer et arrêter la détection pour les tests
-if __name__ == "__main__":
-    try:
-        start_detection(
-            model=model,
-            score_threshold=0.5,
-            overlapping_factor=0.8,
-            audio_source=audio_source,
-            rtsp_url=rtsp_url,
-        )
-    except KeyboardInterrupt:
-        logging.info("Detection stopped by user.")
-        stop_detection()

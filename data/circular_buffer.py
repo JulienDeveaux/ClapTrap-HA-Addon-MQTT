@@ -73,7 +73,7 @@ class CircularAudioBuffer:
                 return True
                 
         except Exception as e:
-            print(f"Erreur lors de l'écriture dans le buffer: {str(e)}")
+            logging.error(f"Erreur lors de l'écriture dans le buffer: {str(e)}")
             return False
             
     def read(self, n_samples):
