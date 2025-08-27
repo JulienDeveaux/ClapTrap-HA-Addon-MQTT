@@ -177,7 +177,14 @@ def start_detection(
         while detection_thread.is_alive():
             time.sleep(0.1)
             if not detection_running:
-                break
+                logging.info("Starting Again Detection Thread")
+                detection_thread = threading.Thread(target=run_detection, args=(
+                    model,
+                    audio_source,
+                    rtsp_url
+                ))
+                detection_thread.daemon = True
+                detection_thread.start()
         
         return True
         
@@ -236,6 +243,7 @@ def run_detection(model, audio_source, rtsp_url):
             while detection_running:
                 audio_data = next(rtsp_reader)
                 detector.process_audio(audio_data, source_id)
+            logging.info("Détection RTSP terminée")
                 
         elif audio_source.startswith("vban://"):
             vban_ip = audio_source.replace("vban://", "")
