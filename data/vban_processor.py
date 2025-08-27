@@ -280,26 +280,6 @@ class VBANAudioProcessor:
         """
         mqtt_client = MQTTClient()
         mqtt_client.publish(self.stream_name, 'on')
-        # try:
-            # Notification webhook
-            # TODO MQTT HERE ?
-            # if self.webhook_url:
-            #     try:
-            #         logging.info(f"Envoi webhook vers {self.webhook_url} pour le stream {self.stream_name}")
-            #         data = {
-            #             'event': 'clap_detected',
-            #             'source': 'vban',
-            #             'stream_name': self.stream_name,
-            #             'score': score,
-            #             'timestamp': timestamp
-            #         }
-            #         response = self.webhook_manager.send_webhook(self.webhook_url, data)
-            #         logging.info(f"Webhook envoyé avec succès, status: {response.status_code}")
-            #     except requests.exceptions.RequestException as e:
-            #         logging.error(f"Erreur lors de l'appel webhook pour {self.stream_name}: {str(e)}, URL: {self.webhook_url}")
-                    
-        # except Exception as e:
-        #     logging.error(f"Erreur lors de la notification: {str(e)}")
             
     def _process_vban_stream(self, stream_data):
         """

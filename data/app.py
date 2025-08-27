@@ -14,8 +14,7 @@ logging.basicConfig(
 # Réduire le niveau de log des modules trop verbeux
 logging.getLogger('werkzeug').setLevel(logging.WARNING)
 
-# TODO revert to /data/options.json
-SETTINGS_FILE = "/home/juliend/IdeaProjects/ClapTrap-HA-Addon/data/settings.json"
+SETTINGS_FILE = "/data/options.json"
 
 # Initialiser le détecteur VBAN
 init_vban()

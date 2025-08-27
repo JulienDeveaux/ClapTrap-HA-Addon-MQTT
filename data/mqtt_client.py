@@ -4,8 +4,7 @@ import os
 import threading
 import paho.mqtt.client as mqtt
 
-# TODO revert to /data/options.json
-SETTINGS_FILE = "/home/juliend/IdeaProjects/ClapTrap-HA-Addon/data/settings.json"
+SETTINGS_FILE = "/data/options.json"
 
 
 def load_settings():

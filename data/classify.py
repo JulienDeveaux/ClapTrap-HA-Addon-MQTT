@@ -23,8 +23,7 @@ logging.basicConfig(
     ]
 )
 
-# TODO revert to /data/options.json
-SETTINGS_FILE = "/home/juliend/IdeaProjects/ClapTrap-HA-Addon/data/settings.json"
+SETTINGS_FILE = "/data/options.json"
 
 warnings.filterwarnings("ignore", category=UserWarning, module="google.protobuf.symbol_database")
 
