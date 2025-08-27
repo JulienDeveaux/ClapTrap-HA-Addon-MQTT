@@ -2,9 +2,9 @@ name: "ClapTrap-CUSTOM"
 version: "2.1.0"
 slug: "claptrap"
 description: "Application de détection d'applaudissements en temps réel utilisant YAMNet, compatible avec les flux audio locaux et RTSP"
-url: "https://github.com/julien-deveaux/ClapTrap-HA-Addon"
+url: "https://github.com/JulienDeveaux/ClapTrap-HA-Addon"
 init: false
-maintainer: "julien-deveaux"
+maintainer: "JulienDeveaux"
 arch:
   - aarch64
   - amd64
