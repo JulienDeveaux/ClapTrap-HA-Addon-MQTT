@@ -10,7 +10,4 @@ RUN apt-get install libasound-dev libportaudio2 libportaudiocpp0 portaudio19-dev
 RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
-EXPOSE 6980
-EXPOSE 16045
-
 CMD [ "python", "./app.py" ]

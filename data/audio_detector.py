@@ -4,8 +4,6 @@ import threading
 from mediapipe.tasks import python
 from mediapipe.tasks.python import audio
 from mediapipe.tasks.python.components import containers
-from mediapipe.tasks.python.audio import audio_classifier
-import mediapipe as mp
 import time
 import logging
 

@@ -2,18 +2,67 @@ name: "ClapTrap"
 version: "2.1.0"
 slug: "claptrap"
 description: "Application de détection d'applaudissements en temps réel utilisant YAMNet, compatible avec les flux audio locaux et RTSP"
-url: "https://github.com/lfpoulain/ClapTrap-HA-Addon"
+url: "https://github.com/julien-deveaux/ClapTrap-HA-Addon"
+init: false
+maintainer: "jdeveaux"
 arch:
   - aarch64
   - amd64
   - armhf
   - armv7
   - i386
-startup: application
-host_network: true
-#ports:
-#  "16045/tcp": 16045
-#  "6980/tcp": 6980
-init: false
-webui: "http://[HOST]:[PORT:16045]"
-maintainer: "lfpoulain"
+options:
+  global:
+    threshold: 0.5
+    delay: 1.0
+    chunk_duration: 0.5
+    buffer_duration: 1.0
+  mqtt:
+    client_id: "claptrap_mqtt_client"
+    host: ""
+    username: ""
+    password: ""
+    port: 1883
+    topic: "claptrap"
+  microphone:
+      device_index: 0
+      audio_source: "default"
+      enabled: "False"
+  rtsp:
+    - id: 1
+      url: "rtsp://username:password@ip_address:port/stream"
+      name: "Camera 1"
+      enabled: "False"
+  vban:
+    - ip: "0.0.0.0"
+      steam_name: "vban_stream"
+      port: 6980
+      enabled: "False"
+
+schema:
+  global:
+    threshold: str
+    delay: str
+    chunk_duration: str
+    buffer_duration: str
+  mqtt:
+    client_id: str
+    host: str
+    username: str
+    password: str
+    port: str
+    topic: str
+  microphone:
+      device_index: int
+      audio_source: str
+      enabled: str
+  rtsp:
+    - id: int
+      url: str
+      name: str
+      enabled: str
+  vban:
+    - ip: str
+      steam_name: str
+      port: int
+      enabled: str

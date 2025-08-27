@@ -1,3 +1,4 @@
+import logging
 import socket
 import threading
 import time
@@ -76,7 +77,7 @@ class VBANDiscovery:
             self._thread.start()
             print("Boucle de découverte VBAN démarrée")
         except Exception as e:
-            print(f"Erreur lors du démarrage de la découverte VBAN: {e}")
+            logging.error(f"Erreur lors du démarrage de la découverte VBAN: {e}")
             if self._sock:
                 try:
                     self._sock.close()
@@ -161,7 +162,7 @@ class VBANDiscovery:
                 channels=channels
             )
         except Exception as e:
-            print(f"Erreur lors du parsing du paquet VBAN: {e}")
+            logging.error(f"Erreur lors du parsing du paquet VBAN: {e}")
             return None
             
     def _decode_sample_rate(self, index: int) -> int:
@@ -200,21 +201,5 @@ class VBANDiscovery:
                     print(f"- {source.stream_name} ({source.ip}:{source.port})")
                 return sources
         except Exception as e:
-            print(f"Erreur dans get_active_sources: {str(e)}")
+            logging.error(f"Erreur dans get_active_sources: {str(e)}")
             return []
-
-# Example d'utilisation
-if __name__ == "__main__":
-    discovery = VBANDiscovery()
-    discovery.start()
-    
-    try:
-        while True:
-            sources = discovery.get_active_sources()
-            print("\nSources VBAN actives:")
-            for source in sources:
-                print(f"- {source.stream_name} ({source.ip}:{source.port})")
-                print(f"  {source.channels} canaux @ {source.sample_rate}Hz")
-            time.sleep(1)
-    except KeyboardInterrupt:
-        discovery.stop() 

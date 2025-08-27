@@ -1,9 +1,7 @@
 import socket
-import struct
 import time
 from collections import defaultdict
 import numpy as np
-import sounddevice as sd
 import scipy.signal
 import collections
 import threading

@@ -1,23 +1,15 @@
 import time
-import requests
 import ffmpeg
 import logging
 import numpy as np
 import sounddevice as sd
-from mediapipe.tasks import python
-from mediapipe.tasks.python.components import containers
-from mediapipe.tasks.python import audio
-from flask_socketio import SocketIO
 import json
-import warnings
 import wave
 import os
-import pyaudio
-import collections
-import cv2
 import sys
-from events import send_clap_event, send_labels
 import threading
+
+from data.mqtt_client import MQTTClient
 from vban_manager import get_vban_detector  # Import the get_vban_detector function
 import warnings
 from audio_detector import AudioDetector
@@ -31,6 +23,9 @@ logging.basicConfig(
     ]
 )
 
+# TODO revert to /data/options.json
+SETTINGS_FILE = "/home/juliend/IdeaProjects/ClapTrap-HA-Addon/data/settings.json"
+
 warnings.filterwarnings("ignore", category=UserWarning, module="google.protobuf.symbol_database")
 
 # Variables globales
@@ -42,19 +37,21 @@ output_file = "recorded_audio.wav"
 current_audio_source = None
 _socketio = None  # Renamed to _socketio to avoid conflict with parameter
 
-def reload_settings():
-    """Recharge les paramètres depuis le fichier settings.json"""
-    try:
-        with open('settings.json', 'r') as f:
-            return json.load(f)
-    except Exception as e:
-        logging.error(f"Erreur lors du rechargement des paramètres: {e}")
-        return None
+def load_settings():
+    if os.path.exists(SETTINGS_FILE):
+        with open(SETTINGS_FILE, 'r') as f:
+            settings = json.load(f)
+            print("test")
+            print(settings)
+        return settings
+    print(f"Settings file {SETTINGS_FILE} not found.")
+    return None
+
+SETTINGS = load_settings()
 
 # Charger les paramètres depuis settings.json
 try:
-    with open('settings.json', 'r') as f:
-        settings = json.load(f)
+    settings = SETTINGS
         
     # Récupérer la source audio depuis la section microphone
     microphone_settings = settings.get('microphone', {})
@@ -90,11 +87,10 @@ except Exception as e:
     logging.error(f"Erreur lors du chargement des paramètres: {str(e)}")
     raise
 
-# Charger les flux RTSP et leurs webhooks associés
+# Charger les flux RTSP
 try:
-    with open("settings.json") as f:
-        settings_data = json.load(f)
-        fluxes = settings_data.get('rtsp_streams', {})
+    settings_data = SETTINGS
+    fluxes = settings_data.get('rtsp', {})
 except FileNotFoundError:
     logging.warning("Le fichier settings.json n'existe pas, aucun flux RTSP ne sera chargé")
     fluxes = {}
@@ -157,12 +153,8 @@ def read_audio_from_rtsp(rtsp_url, buffer_size):
 
 def start_detection(
     model,
-    max_results,
     score_threshold: float,
     overlapping_factor,
-    socketio: SocketIO,
-    webhook_url: str,
-    delay: float,
     audio_source: str,
     rtsp_url: str = None,
 ):
@@ -173,7 +165,7 @@ def start_detection(
             return False
 
         # Recharger les paramètres pour avoir les dernières modifications
-        settings = reload_settings()
+        settings = SETTINGS
         if settings:
             microphone_settings = settings.get('microphone', {})
             if isinstance(microphone_settings, dict) and microphone_settings.get('enabled', False):
@@ -183,7 +175,6 @@ def start_detection(
 
         detection_running = True
         current_audio_source = audio_source
-        _socketio = socketio  # Store the socketio instance globally
 
         if (overlapping_factor <= 0) or (overlapping_factor >= 1.0):
             raise ValueError("Overlapping factor must be between 0 and 1.")
@@ -194,17 +185,16 @@ def start_detection(
         # Démarrer la détection dans un thread séparé
         detection_thread = threading.Thread(target=run_detection, args=(
             model,
-            max_results,
-            score_threshold,
-            overlapping_factor,
-            socketio,
-            webhook_url,
-            delay,
             audio_source,
             rtsp_url
         ))
         detection_thread.daemon = True
         detection_thread.start()
+
+        while detection_thread.is_alive():
+            time.sleep(0.1)
+            if not detection_running:
+                break
         
         return True
         
@@ -213,28 +203,21 @@ def start_detection(
         detection_running = False
         return False
 
-def run_detection(model, max_results, score_threshold, overlapping_factor, socketio, webhook_url, delay, audio_source, rtsp_url):
+def run_detection(model, audio_source, rtsp_url):
     """Fonction qui exécute la détection dans un thread séparé"""
     try:
         # Initialiser le détecteur audio
         detector = AudioDetector(model, sample_rate=16000, buffer_duration=1.0)
         detector.initialize()
         
-        def create_detection_callback(source_name, webhook_url=None):
+        def create_detection_callback(source_name):
             def handle_detection(detection_data):
                 try:
-                    logging.info(f"CLAP détecté sur {source_name} avec score {detection_data['score']}")
-                    if socketio:
-                        socketio.emit('clap', {
-                            'source_id': source_name,
-                            'timestamp': detection_data['timestamp'],
-                            'score': detection_data['score']
-                        })
-                    
-                    # Utiliser le webhook_url passé au callback
-                    if webhook_url:
-                        logging.info(f"Envoi webhook pour {source_name} vers {webhook_url}")
-                        requests.post(webhook_url)
+                    logging.info(f"CLAP détecté sur {source_name} avec score {detection_data['score']} at {detection_data['timestamp']}")
+
+                    # Envoyer l'événement via MQTT
+                    mqtt_client = MQTTClient()
+                    mqtt_client.publish(source_name, 'on')
                 except Exception as e:
                     logging.error(f"Erreur lors de l'envoi de l'événement clap pour {source_name}: {str(e)}")
             return handle_detection
@@ -242,14 +225,12 @@ def run_detection(model, max_results, score_threshold, overlapping_factor, socke
         def create_labels_callback(source_name):
             def handle_labels(labels):
                 logging.debug(f"Labels détectés sur {source_name}: {labels}")
-                if socketio:
-                    socketio.emit("labels", {"source": source_name, "detected": labels})
             return handle_labels
         
         # Vérifier si une source audio est configurée
         if not audio_source:
             logging.error("Aucune source audio n'est configurée ou active")
-            return
+            return False
             
         # Initialiser la source audio en fonction du paramètre audio_source
         if audio_source.startswith("rtsp"):
@@ -257,22 +238,10 @@ def run_detection(model, max_results, score_threshold, overlapping_factor, socke
                 raise ValueError("RTSP URL must be provided for RTSP audio source.")
                 
             source_id = f"rtsp_{rtsp_url}"
-            
-            # Récupérer le webhook_url depuis les paramètres RTSP
-            settings = reload_settings()
-            rtsp_webhook_url = None
-            if settings and 'rtsp_sources' in settings:
-                for source in settings['rtsp_sources']:
-                    if source.get('url') == rtsp_url and source.get('enabled', True):
-                        rtsp_webhook_url = source.get('webhook_url')
-                        break
-            
-            # Utiliser le webhook spécifique à la source RTSP s'il existe, sinon utiliser celui par défaut
-            webhook_url_to_use = rtsp_webhook_url or webhook_url
-            
+
             detector.add_source(
                 source_id=source_id,
-                detection_callback=create_detection_callback(source_id, webhook_url_to_use),
+                detection_callback=create_detection_callback(source_id),
                 labels_callback=create_labels_callback(source_id)
             )
             
@@ -288,29 +257,16 @@ def run_detection(model, max_results, score_threshold, overlapping_factor, socke
         elif audio_source.startswith("vban://"):
             vban_ip = audio_source.replace("vban://", "")
             source_id = f"vban_{vban_ip}"
-            
-            # Récupérer le webhook_url depuis les paramètres VBAN
-            settings = reload_settings()
-            vban_webhook_url = None
-            if settings and 'saved_vban_sources' in settings:
-                for source in settings['saved_vban_sources']:
-                    if source.get('ip') == vban_ip and source.get('enabled', True):
-                        vban_webhook_url = source.get('webhook_url')
-                        break
-            
-            # Utiliser le webhook spécifique à la source VBAN s'il existe, sinon utiliser celui par défaut
-            webhook_url_to_use = vban_webhook_url or webhook_url
-            
+
             detector.add_source(
                 source_id=source_id,
-                detection_callback=create_detection_callback(source_id, webhook_url_to_use),
+                detection_callback=create_detection_callback(source_id),
                 labels_callback=create_labels_callback(source_id)
             )
             
             # Démarrer la détection
             detector.start()
-            logging.info(f"Détection démarrée pour la source VBAN {source_id} avec webhook {webhook_url_to_use}")
-            
+
             vban_detector = get_vban_detector()
             
             def audio_callback(audio_data, timestamp):
@@ -337,17 +293,13 @@ def run_detection(model, max_results, score_threshold, overlapping_factor, socke
                     
         else:  # Microphone
             # Récupérer l'index du périphérique depuis les paramètres
-            settings = reload_settings()
+            settings = SETTINGS
             device_index = int(settings.get('microphone', {}).get('device_index', 0))
             source_id = f"mic_{device_index}"
-            
-            # Récupérer le webhook_url depuis les paramètres du microphone
-            microphone_webhook_url = settings.get('microphone', {}).get('webhook_url')
-            webhook_url_to_use = microphone_webhook_url or webhook_url
-            
+
             detector.add_source(
                 source_id=source_id,
-                detection_callback=create_detection_callback(source_id, webhook_url_to_use),
+                detection_callback=create_detection_callback(source_id),
                 labels_callback=create_labels_callback(source_id)
             )
             
@@ -375,14 +327,10 @@ def run_detection(model, max_results, score_threshold, overlapping_factor, socke
 
 def stop_detection():
     """Arrête la détection"""
-    global detection_running, classifier, record, current_audio_source, _socketio
+    global detection_running, classifier, record, current_audio_source
     
     try:
         detection_running = False
-        
-        # Notify clients that detection has stopped
-        if _socketio:
-            _socketio.emit("detection_status", {"status": "stopped"})
         
         if record:
             record.stop()
@@ -407,15 +355,10 @@ def is_running():
 # Ajout d'une commande simple pour démarrer et arrêter la détection pour les tests
 if __name__ == "__main__":
     try:
-        socketio = SocketIO()
         start_detection(
             model=model,
-            max_results=5,
             score_threshold=0.5,
             overlapping_factor=0.8,
-            socketio=socketio,
-            webhook_url="http://example.com/webhook",
-            delay=2.0,
             audio_source=audio_source,
             rtsp_url=rtsp_url,
         )

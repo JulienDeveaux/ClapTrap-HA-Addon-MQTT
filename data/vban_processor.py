@@ -4,30 +4,11 @@ import numpy as np
 from mediapipe.tasks import python
 from mediapipe.tasks.python import audio
 from mediapipe.tasks.python.components import containers
+
+from data.mqtt_client import MQTTClient
 from vban_manager import get_vban_detector
 from circular_buffer import CircularAudioBuffer
 from vban_signal_processor import VBANSignalProcessor
-
-class WebhookManager:
-    def __init__(self):
-        self.session = requests.Session()
-        retry_strategy = Retry(
-            total=3,
-            backoff_factor=1,
-            status_forcelist=[500, 502, 503, 504]
-        )
-        self.session.mount('http://', HTTPAdapter(max_retries=retry_strategy))
-        self.session.mount('https://', HTTPAdapter(max_retries=retry_strategy))
-    
-    def send_webhook(self, url, data):
-        """Envoie une requête webhook et retourne la réponse"""
-        try:
-            response = self.session.post(url, json=data, timeout=5)
-            response.raise_for_status()
-            return response
-        except requests.exceptions.RequestException as e:
-            logging.error(f"Webhook failed: {str(e)}")
-            raise
 
 class VBANAudioProcessor:
     """
@@ -36,7 +17,7 @@ class VBANAudioProcessor:
     dans les flux audio VBAN.
     """
     
-    def __init__(self, ip, port, stream_name, webhook_url=None, score_threshold=0.2, delay=1.0):
+    def __init__(self, ip, port, stream_name, score_threshold=0.2, delay=1.0):
         """
         Initialise le processeur audio VBAN.
         
@@ -44,7 +25,6 @@ class VBANAudioProcessor:
             ip (str): Adresse IP de la source VBAN
             port (int): Port de la source VBAN
             stream_name (str): Nom du flux VBAN
-            webhook_url (str, optional): URL du webhook à appeler lors de la détection d'un clap
             score_threshold (float, optional): Seuil de score pour la détection des claps
             delay (float, optional): Délai minimum entre deux détections de claps
         """
@@ -52,7 +32,6 @@ class VBANAudioProcessor:
         self.ip = ip
         self.port = port
         self.stream_name = stream_name
-        self.webhook_url = webhook_url
         
         # Configuration de la détection
         self.score_threshold = score_threshold
@@ -90,13 +69,9 @@ class VBANAudioProcessor:
         self.last_clap_time = 0
         self.classifier = None
         self.detector = None
-        self._socketio = None  # Pour les notifications websocket
         
         # Initialisation du classificateur
         self.initialize_classifier()
-        
-        # Gestionnaire de webhooks
-        self.webhook_manager = WebhookManager()
         
     def initialize_classifier(self):
         """Configure et initialise le classificateur audio YAMNet."""
@@ -201,15 +176,6 @@ class VBANAudioProcessor:
         except Exception as e:
             logging.error(f"Erreur dans le callback de classification: {str(e)}")
             
-    def set_socketio(self, socketio):
-        """
-        Configure l'instance SocketIO pour les notifications en temps réel.
-        
-        Args:
-            socketio: Instance SocketIO pour les notifications websocket
-        """
-        self._socketio = socketio
-            
     def start(self):
         """Démarre le traitement audio VBAN."""
         try:
@@ -306,40 +272,34 @@ class VBANAudioProcessor:
             
     def notify_clap(self, score, timestamp):
         """
-        Notifie la détection d'un clap via webhook et websocket.
+        Notifie la détection d'un clap via MQTT
         
         Args:
             score (float): Score de confiance de la détection
             timestamp (float): Timestamp de la détection
         """
-        try:
-            # Notification websocket
-            if self._socketio:
-                self._socketio.emit('clap_detected', {
-                    'source': 'vban',
-                    'stream_name': self.stream_name,
-                    'score': score,
-                    'timestamp': timestamp
-                })
-                
+        mqtt_client = MQTTClient()
+        mqtt_client.publish(self.stream_name, 'on')
+        # try:
             # Notification webhook
-            if self.webhook_url:
-                try:
-                    logging.info(f"Envoi webhook vers {self.webhook_url} pour le stream {self.stream_name}")
-                    data = {
-                        'event': 'clap_detected',
-                        'source': 'vban',
-                        'stream_name': self.stream_name,
-                        'score': score,
-                        'timestamp': timestamp
-                    }
-                    response = self.webhook_manager.send_webhook(self.webhook_url, data)
-                    logging.info(f"Webhook envoyé avec succès, status: {response.status_code}")
-                except requests.exceptions.RequestException as e:
-                    logging.error(f"Erreur lors de l'appel webhook pour {self.stream_name}: {str(e)}, URL: {self.webhook_url}")
+            # TODO MQTT HERE ?
+            # if self.webhook_url:
+            #     try:
+            #         logging.info(f"Envoi webhook vers {self.webhook_url} pour le stream {self.stream_name}")
+            #         data = {
+            #             'event': 'clap_detected',
+            #             'source': 'vban',
+            #             'stream_name': self.stream_name,
+            #             'score': score,
+            #             'timestamp': timestamp
+            #         }
+            #         response = self.webhook_manager.send_webhook(self.webhook_url, data)
+            #         logging.info(f"Webhook envoyé avec succès, status: {response.status_code}")
+            #     except requests.exceptions.RequestException as e:
+            #         logging.error(f"Erreur lors de l'appel webhook pour {self.stream_name}: {str(e)}, URL: {self.webhook_url}")
                     
-        except Exception as e:
-            logging.error(f"Erreur lors de la notification: {str(e)}")
+        # except Exception as e:
+        #     logging.error(f"Erreur lors de la notification: {str(e)}")
             
     def _process_vban_stream(self, stream_data):
         """
