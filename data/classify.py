@@ -9,7 +9,7 @@ import os
 import sys
 import threading
 
-from data.mqtt_client import MQTTClient
+from mqtt_client import MQTTClient
 from vban_manager import get_vban_detector  # Import the get_vban_detector function
 import warnings
 from audio_detector import AudioDetector

@@ -5,7 +5,7 @@ from mediapipe.tasks import python
 from mediapipe.tasks.python import audio
 from mediapipe.tasks.python.components import containers
 
-from data.mqtt_client import MQTTClient
+from mqtt_client import MQTTClient
 from vban_manager import get_vban_detector
 from circular_buffer import CircularAudioBuffer
 from vban_signal_processor import VBANSignalProcessor
