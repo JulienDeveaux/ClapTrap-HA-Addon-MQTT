@@ -33,12 +33,12 @@ class MQTTClient:
             self.initialized = True
             settings = load_settings()
 
-            self.broker_url = mqtt_settings.get('mqtt_host', 'localhost')
-            self.broker_port = mqtt_settings.get('mqtt_port', 1883)
-            self.username = mqtt_settings.get('mqtt_username', None)
-            self.password = mqtt_settings.get('mqtt_password', None)
-            self.client_id = mqtt_settings.get('mqtt_client_id', None)
-            self.topic = mqtt_settings.get('mqtt_topic', None)
+            self.broker_url = settings.get('mqtt_host', 'localhost')
+            self.broker_port = settings.get('mqtt_port', 1883)
+            self.username = settings.get('mqtt_username', None)
+            self.password = settings.get('mqtt_password', None)
+            self.client_id = settings.get('mqtt_client_id', None)
+            self.topic = settings.get('mqtt_topic', None)
             self.connection = None
 
     def connect(self):
