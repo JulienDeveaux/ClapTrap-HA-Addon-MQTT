@@ -98,22 +98,30 @@ except Exception as e:
     logging.error(f"Erreur lors du chargement des flux RTSP: {str(e)}")
     fluxes = {}
 
+def log_ffmpeg_output(process):
+    def forward_stderr():
+        for line in iter(process.stderr.readline, b''):
+            sys.stdout.buffer.write(line)
+            sys.stdout.flush()
+    threading.Thread(target=forward_stderr, daemon=True).start()
+
 def read_audio_from_rtsp(rtsp_url, buffer_size, sampling_rate):
     """Lit un flux RTSP audio en continu sans buffer fichier"""
     try:
         # Configuration du processus ffmpeg pour lire le flux RTSP
         process = (
             ffmpeg
-            .input(rtsp_url)
-            .output('pipe:', 
+            .input(rtsp_url, rtsp_transport='udp')
+            .output('pipe:',
                    format='f32le',  # Format PCM 32-bit float
-                   acodec='pcm_f32le', 
+                   acodec='pcm_f32le',
                    ac=1,  # Mono
                    ar=sampling_rate,
-                   buffer_size='64k'  # Réduire la taille du buffer
+                   buffer_size=buffer_size
             )
             .run_async(pipe_stdout=True, pipe_stderr=True)
         )
+        log_ffmpeg_output(process)
 
         while True:
             # Lecture des données audio par blocs
