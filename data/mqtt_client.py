@@ -64,11 +64,11 @@ class MQTTClient:
         Publie la config MQTT Discovery pour un binary_sensor
         """
 
-        discovery_topic = f"homeassistant/binary_sensor/{entity_id}/config"
+        discovery_topic = f"homeassistant/binary_sensor/Clapper/config"
         payload = {
             "name": None,  # On dérive le nom de l'entité du device
             "device_class": device_class,
-            "state_topic": f"{self.base_topic}/{entity_id}/state",
+            "state_topic": f"{self.base_topic}/Clapper/state",
             "unique_id": f"{entity_id}_sensor",
             "device": {
                 "identifiers": [entity_id],

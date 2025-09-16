@@ -247,9 +247,9 @@ def run_detection(model, audio_source, rtsp_url):
                     # Envoyer l'événement via MQTT
                     mqtt_client = MQTTClient()
                     mqtt_client.publish_discovery(source_name)
-                    mqtt_client.publish(f"{mqtt_client.base_topic}/{source_name}/state", "ON")
+                    mqtt_client.publish(f"{mqtt_client.base_topic}/Clapper/state", "ON")
                     time.sleep(0.5)
-                    mqtt_client.publish(f"{mqtt_client.base_topic}/{source_name}/state", "OFF")
+                    mqtt_client.publish(f"{mqtt_client.base_topic}/Clapper/state", "OFF")
                 except Exception as e:
                     logging.error(f"Erreur lors de l'envoi de l'événement clap pour {source_name}: {str(e)}")
             return handle_detection
