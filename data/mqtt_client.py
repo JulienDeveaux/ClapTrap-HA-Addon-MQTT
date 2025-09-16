@@ -37,7 +37,7 @@ class MQTTClient:
             self.username = settings.get('mqtt_username', None)
             self.password = settings.get('mqtt_password', None)
             self.client_id = settings.get('mqtt_client_id', None)
-            self.topic = settings.get('mqtt_topic', None)
+            self.base_topic = settings.get('mqtt_topic', 'claptrap')
             self.connection = None
 
     def connect(self):
@@ -58,6 +58,24 @@ class MQTTClient:
         else:
             self.connect()
             self.publish(topic, message, retry + 1)
+
+    def publish_discovery(self, entity_id, name=None, device_class="motion"):
+        """
+        Publie la config MQTT Discovery pour un binary_sensor
+        """
+        if name is None:
+            name = entity_id
+
+        discovery_topic = f"homeassistant/binary_sensor/{entity_id}/config"
+        payload = {
+            "name": name,
+            "state_topic": f"{self.base_topic}/{entity_id}/state",
+            "payload_on": "on",
+            "payload_off": "off",
+            "device_class": device_class,
+            "unique_id": f"{entity_id}_sensor"
+        }
+        self.publish(discovery_topic, json.dumps(payload))
 
     def disconnect(self):
         if self.connection:
