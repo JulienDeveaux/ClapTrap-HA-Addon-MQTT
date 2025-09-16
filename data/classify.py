@@ -1,10 +1,10 @@
+import subprocess
 import time
 import ffmpeg
 import logging
 import numpy as np
 import sounddevice as sd
 import json
-import wave
 import os
 import sys
 import threading
@@ -98,7 +98,7 @@ except Exception as e:
     logging.error(f"Erreur lors du chargement des flux RTSP: {str(e)}")
     fluxes = {}
 
-def read_audio_from_rtsp(rtsp_url, buffer_size):
+def read_audio_from_rtsp(rtsp_url, buffer_size, sampling_rate):
     """Lit un flux RTSP audio en continu sans buffer fichier"""
     try:
         # Configuration du processus ffmpeg pour lire le flux RTSP
@@ -109,7 +109,7 @@ def read_audio_from_rtsp(rtsp_url, buffer_size):
                    format='f32le',  # Format PCM 32-bit float
                    acodec='pcm_f32le', 
                    ac=1,  # Mono
-                   ar='16000',
+                   ar=sampling_rate,
                    buffer_size='64k'  # Réduire la taille du buffer
             )
             .run_async(pipe_stdout=True, pipe_stderr=True)
@@ -185,7 +185,7 @@ def start_detection(
                 ))
                 detection_thread.daemon = True
                 detection_thread.start()
-        
+
         return True
         
     except Exception as e:
@@ -193,11 +193,42 @@ def start_detection(
         detection_running = False
         return False
 
+def get_sample_rate(audio_source, rtsp_url):
+    if audio_source.startswith("rtsp"):
+        """Use ffprobe to get sample rate from RTSP stream."""
+        cmd = [
+            'ffprobe',
+            '-v', 'quiet',
+            '-show_entries', 'stream=sample_rate',
+            '-select_streams', 'a:0',
+            '-of', 'json',
+            rtsp_url
+        ]
+        try:
+            result = subprocess.run(cmd, capture_output=True, timeout=10)
+            if result.returncode == 0:
+                data = json.loads(result.stdout)
+                print(data)
+                for stream in data.get('streams', []):
+                    rate = stream.get('sample_rate')
+                    if rate and rate != 'N/A':
+                        logging.info(f"Sample rate detected from RTSP: {rate}")
+                    return int(rate)
+            logging.warning("Could not determine sample rate from RTSP stream, using fallback 16000 Hz")
+            return 16000
+        except (subprocess.TimeoutExpired, json.JSONDecodeError, KeyError, FileNotFoundError):
+            logging.warning("ffprobe not available or failed, using fallback sample rate 16000 Hz")
+            return 16000
+    else:
+        logging.info("Using default sample rate 16000 Hz for non-RTSP source")
+        return 16000
+
 def run_detection(model, audio_source, rtsp_url):
     """Fonction qui exécute la détection dans un thread séparé"""
     try:
         # Initialiser le détecteur audio
-        detector = AudioDetector(model, sample_rate=16000, buffer_duration=1.0)
+        sample_rate = get_sample_rate(audio_source, rtsp_url)
+        detector = AudioDetector(model, sample_rate=sample_rate, buffer_duration=1.0)
         detector.initialize()
         
         def create_detection_callback(source_name):
@@ -239,7 +270,7 @@ def run_detection(model, audio_source, rtsp_url):
             detector.start()
             logging.info(f"Détection démarrée pour la source RTSP {source_id}")
             
-            rtsp_reader = read_audio_from_rtsp(rtsp_url, int(16000 * 0.1))  # Buffer de 100ms
+            rtsp_reader = read_audio_from_rtsp(rtsp_url, int(sample_rate * 0.1), sample_rate)  # Buffer de 100ms
             while detection_running:
                 audio_data = next(rtsp_reader)
                 detector.process_audio(audio_data, source_id)
@@ -301,8 +332,8 @@ def run_detection(model, audio_source, rtsp_url):
             with sd.InputStream(
                 device=device_index,
                 channels=1,
-                samplerate=16000,
-                blocksize=int(16000 * 0.1),  # Buffer de 100ms
+                samplerate=sample_rate,
+                blocksize=int(sample_rate * 0.1),  # Buffer de 100ms
                 callback=lambda indata, frames, time, status: detector.process_audio(indata[:, 0], source_id)
             ):
                 logging.info("Stream audio démarré pour le microphone")

@@ -8,7 +8,7 @@ import time
 import logging
 
 class AudioDetector:
-    def __init__(self, model_path, sample_rate=16000, buffer_duration=1.0):
+    def __init__(self, model_path, sample_rate, buffer_duration=1.0):
         self.model_path = model_path
         self.sample_rate = sample_rate
         self.buffer_size = int(buffer_duration * sample_rate)
