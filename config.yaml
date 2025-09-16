@@ -1,8 +1,8 @@
 name: "ClapTrap-MQTT"
-version: "2.2.3"
+version: "2.2.4"
 slug: "claptrap"
 description: "Application de détection d'applaudissements en temps réel utilisant YAMNet, compatible avec les flux audio locaux et RTSP"
-url: "https://github.com/JulienDeveaux/ClapTrap-HA-Addon"
+url: "https://github.com/JulienDeveaux/ClapTrap-HA-Addon-MQTT"
 init: false
 maintainer: "JulienDeveaux"
 arch:
