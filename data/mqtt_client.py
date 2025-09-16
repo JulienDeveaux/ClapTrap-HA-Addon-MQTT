@@ -50,32 +50,32 @@ class MQTTClient:
             self.connection.connect(self.broker_url, self.broker_port)
             self.connection.loop_start()
 
-    def publish(self, topic, message, retry=0):
+    def publish(self, topic, message, retry=0, retain=False):
         if self.connection:
-            self.connection.publish(topic, message)
+            self.connection.publish(topic, message, retain=retain)
         elif retry > 3:
             logging.error("Failed to connect to MQTT broker after 3 retries.")
         else:
             self.connect()
             self.publish(topic, message, retry + 1)
 
-    def publish_discovery(self, entity_id, name=None, device_class="motion"):
+    def publish_discovery(self, entity_id, device_name="Clapper", device_class="motion"):
         """
         Publie la config MQTT Discovery pour un binary_sensor
         """
-        if name is None:
-            name = entity_id
 
         discovery_topic = f"homeassistant/binary_sensor/{entity_id}/config"
         payload = {
-            "name": name,
-            "state_topic": f"{self.base_topic}/{entity_id}/state",
-            "payload_on": "on",
-            "payload_off": "off",
+            "name": None,  # On dérive le nom de l'entité du device
             "device_class": device_class,
-            "unique_id": f"{entity_id}_sensor"
+            "state_topic": f"{self.base_topic}/{entity_id}/state",
+            "unique_id": f"{entity_id}_sensor",
+            "device": {
+                "identifiers": [entity_id],
+                "name": device_name or entity_id
+            }
         }
-        self.publish(discovery_topic, json.dumps(payload))
+        self.publish(discovery_topic, json.dumps(payload), retain=True)
 
     def disconnect(self):
         if self.connection:
