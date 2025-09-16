@@ -170,11 +170,7 @@ class AudioDetector:
             # S'assurer que les données sont en float32
             if audio_data.dtype != np.float32:
                 audio_data = audio_data.astype(np.float32)
-            
-            # Log des statistiques audio
-            if len(audio_data) > 0:
-                logging.debug(f"Audio stats (source {source_id}) - min: {np.min(audio_data):.4f}, max: {np.max(audio_data):.4f}, mean: {np.mean(audio_data):.4f}, std: {np.std(audio_data):.4f}")
-            
+
             # Ajouter les nouvelles données au buffer de la source
             self.sources[source_id]['buffer'].extend(audio_data)
             
@@ -219,9 +215,6 @@ class AudioDetector:
                         self.classifier.classify_async(audio_data_container, next_timestamp)
                     except Exception as e:
                         logging.error(f"Erreur lors de la classification: {str(e)}")
-                
-                if blocks_processed > 0:
-                    logging.debug(f"Blocs traités pour {source_id}: {blocks_processed}")
                 
                 # Mettre à jour le buffer avec les données restantes
                 self.sources[source_id]['buffer'].clear()
